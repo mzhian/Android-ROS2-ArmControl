@@ -24,6 +24,8 @@ class RobotArmDebugActivity : AppCompatActivity() {
 
     private lateinit var hostInput: EditText
     private lateinit var portInput: EditText
+    private lateinit var moveJInput: EditText
+    private lateinit var gripperInput: EditText
     private lateinit var statusText: TextView
 
     private var jointStatesJob: Job? = null
@@ -38,10 +40,14 @@ class RobotArmDebugActivity : AppCompatActivity() {
 
         hostInput = findViewById(R.id.inputHost)
         portInput = findViewById(R.id.inputPort)
+        moveJInput = findViewById(R.id.inputMoveJ)
+        gripperInput = findViewById(R.id.inputGripper)
         statusText = findViewById(R.id.statusText)
 
         hostInput.setText(prefs.getString(KEY_HOST, DEFAULT_HOST))
         portInput.setText(prefs.getInt(KEY_PORT, DEFAULT_PORT).toString())
+        moveJInput.setText(DEFAULT_MOVE_J)
+        gripperInput.setText(DEFAULT_GRIPPER)
 
         findViewById<Button>(R.id.btnConnect).setOnClickListener {
             connectToRosbridge()
@@ -55,13 +61,22 @@ class RobotArmDebugActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btnMoveJ).setOnClickListener {
             val armController = controller ?: return@setOnClickListener showStatus("Please connect first")
-            armController.moveJ(0.0, -0.3, 1.0, 0.5, 0.2, 0.0)
+            val values = parseCommandValues(moveJInput, expectedSize = 6, commandName = "MoveJ") ?: return@setOnClickListener
+            armController.moveJ(
+                values[0],
+                values[1],
+                values[2],
+                values[3],
+                values[4],
+                values[5],
+            )
             statusText.text = "MoveJ command sent"
         }
 
         findViewById<Button>(R.id.btnGripper).setOnClickListener {
             val armController = controller ?: return@setOnClickListener showStatus("Please connect first")
-            armController.controlGripper(1.0, 0.0, 0.0)
+            val values = parseCommandValues(gripperInput, expectedSize = 3, commandName = "Gripper") ?: return@setOnClickListener
+            armController.controlGripper(values[0], values[1], values[2])
             statusText.text = "Gripper command sent"
         }
 
@@ -122,9 +137,32 @@ class RobotArmDebugActivity : AppCompatActivity() {
         statusText.text = message
     }
 
+    private fun parseCommandValues(input: EditText, expectedSize: Int, commandName: String): List<Double>? {
+        val raw = input.text.toString().trim()
+        if (raw.isBlank()) {
+            showStatus("Please input $expectedSize values for $commandName")
+            return null
+        }
+
+        val values = raw
+            .split(',')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .mapNotNull { it.toDoubleOrNull() }
+
+        if (values.size != expectedSize) {
+            showStatus("$commandName requires $expectedSize numeric values")
+            return null
+        }
+
+        return values
+    }
+
     private companion object {
         const val DEFAULT_HOST = "10.0.2.2"
         const val DEFAULT_PORT = 9090
+        const val DEFAULT_MOVE_J = "0.0, -0.3, 1.0, 0.5, 0.2, 0.0"
+        const val DEFAULT_GRIPPER = "1.0, 0.0, 0.0"
         const val KEY_HOST = "rosbridge_host"
         const val KEY_PORT = "rosbridge_port"
     }

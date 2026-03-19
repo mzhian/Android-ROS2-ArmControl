@@ -15,6 +15,7 @@
 ## 当前 Demo 特性
 
 - 支持在 UI 中直接输入 rosbridge 的 Host/IP 与 Port。
+- 支持在 UI 中直接输入 MoveJ 的 6 轴参数和 Gripper 的 3 位参数。
 - 会记住上一次连接成功时输入的 Host/IP 与 Port。
 - 使用 `ScrollView` + 顶部间距布局，避免顶部图标或标题区域与按钮重叠。
 

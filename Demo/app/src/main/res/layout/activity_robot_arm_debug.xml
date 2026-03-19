@@ -60,12 +60,44 @@
             android:layout_marginTop="8dp"
             android:text="Disconnect" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="MoveJ values (6 个，逗号分隔)"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/inputMoveJ"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="0.0, -0.3, 1.0, 0.5, 0.2, 0.0"
+            android:inputType="text"
+            android:singleLine="true" />
+
         <Button
             android:id="@+id/btnMoveJ"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="MoveJ Sample" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Gripper values (3 个，逗号分隔)"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/inputGripper"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="1.0, 0.0, 0.0"
+            android:inputType="text"
+            android:singleLine="true" />
 
         <Button
             android:id="@+id/btnGripper"
