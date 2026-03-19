@@ -21,7 +21,7 @@ data class Publish(
     override val op: String = "publish",
     val topic: String,
     val msg: JsonElement,
-    val type: String? = null, // 补全此字段
+    val type: String? = null,
 ) : RosbridgeMessage
 
 @Serializable
@@ -31,6 +31,20 @@ data class Subscribe(
     val type: String? = null,
     @SerialName("throttle_rate") val throttleRate: Int? = null,
     @SerialName("queue_length") val queueLength: Int? = null,
+) : RosbridgeMessage
+
+@Serializable
+data class Unsubscribe(
+    override val op: String = "unsubscribe",
+    val topic: String,
+    val id: String? = null,
+) : RosbridgeMessage
+
+@Serializable
+data class Unadvertise(
+    override val op: String = "unadvertise",
+    val topic: String,
+    val id: String? = null,
 ) : RosbridgeMessage
 
 @Serializable

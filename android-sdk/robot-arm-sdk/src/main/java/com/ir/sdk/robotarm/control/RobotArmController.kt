@@ -16,6 +16,9 @@ class RobotArmController(
     private val jointStatesTopic: String = "/joint_states",
     private val json: Json = Json { ignoreUnknownKeys = true }
 ) {
+    private val advertisedTopics = mutableSetOf<String>()
+    private val subscribedTopics = mutableSetOf<String>()
+
     fun connect() = rosClient.connect()
 
     fun disconnect() = rosClient.disconnect()
@@ -57,7 +60,9 @@ class RobotArmController(
      * 订阅机械臂关节状态反馈。
      */
     fun observeJointStates(): Flow<JointState> {
-        rosClient.subscribe(topic = jointStatesTopic, messageType = "sensor_msgs/msg/JointState")
+        if (subscribedTopics.add(jointStatesTopic)) {
+            rosClient.subscribe(topic = jointStatesTopic, messageType = "sensor_msgs/msg/JointState")
+        }
         return rosClient.incomingMessages.mapNotNull { payload ->
             val op = payload["op"]?.jsonPrimitive?.content
             val topic = payload["topic"]?.jsonPrimitive?.content
@@ -75,6 +80,11 @@ class RobotArmController(
     private fun publishFloat64MultiArray(topic: String, values: List<Double>, expectedSize: Int): Boolean {
         require(values.size == expectedSize) {
             "Float64MultiArray data size must be $expectedSize, but was ${values.size}"
+        }
+
+        // 预防性：首次发布前先宣告主题，增强兼容性
+        if (advertisedTopics.add(topic)) {
+            rosClient.advertise(topic, "std_msgs/msg/Float64MultiArray")
         }
 
         return rosClient.publish(

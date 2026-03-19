@@ -6,4 +6,8 @@
     <string name="btn_gripper">夹爪控制示例</string>
     <string name="btn_subscribe">订阅实时位姿 (JointStates)</string>
     <string name="status_initial">等待操作...</string>
+    <string name="label_api_url">API 地址:</string>
+    <string name="btn_modify">修改</string>
+    <string name="hint_api_url">例如: ws://10.0.2.2:9090</string>
+    <string name="msg_url_updated">API 地址已更新</string>
 </resources>

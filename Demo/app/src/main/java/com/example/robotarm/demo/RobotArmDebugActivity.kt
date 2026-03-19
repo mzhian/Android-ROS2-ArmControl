@@ -3,7 +3,6 @@ package com.example.robotarm.demo
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
-import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -18,81 +17,72 @@ import kotlinx.coroutines.launch
  * - Connect / Disconnect
  * - MoveJ / Gripper 指令发送
  * - JointStates 订阅显示
- * - UI 输入 rosbridge IP / 端口
  */
 class RobotArmDebugActivity : AppCompatActivity() {
     private val TAG = "RobotArmDemo"
+    private var rosbridgeUrl = "ws://10.136.175.185:9090"
 
-    private var rosClient: RosbridgeClient? = null
-    private var controller: RobotArmController? = null
-
-    private lateinit var hostInput: EditText
-    private lateinit var portInput: EditText
-    private lateinit var moveJInput: EditText
-    private lateinit var gripperInput: EditText
-    private lateinit var statusText: TextView
-
+    private lateinit var rosClient: RosbridgeClient
+    private lateinit var controller: RobotArmController
     private var jointStatesJob: Job? = null
-
-    private val prefs by lazy {
-        getSharedPreferences("robot_arm_demo", MODE_PRIVATE)
-    }
+    private var connectionStateJob: Job? = null
+    private var errorEventsJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_robot_arm_debug)
 
-        hostInput = findViewById(R.id.inputHost)
-        portInput = findViewById(R.id.inputPort)
-        moveJInput = findViewById(R.id.inputMoveJ)
-        gripperInput = findViewById(R.id.inputGripper)
-        statusText = findViewById(R.id.statusText)
+        val edtRosbridgeUrl = findViewById<android.widget.EditText>(R.id.edtRosbridgeUrl)
+        val btnModify = findViewById<Button>(R.id.btnModify)
+        edtRosbridgeUrl.setText(rosbridgeUrl)
 
-        hostInput.setText(prefs.getString(KEY_HOST, DEFAULT_HOST))
-        portInput.setText(prefs.getInt(KEY_PORT, DEFAULT_PORT).toString())
-        moveJInput.setText(DEFAULT_MOVE_J)
-        gripperInput.setText(DEFAULT_GRIPPER)
+        initRosClient(rosbridgeUrl)
+
+        btnModify.setOnClickListener {
+            val newUrl = edtRosbridgeUrl.text.toString()
+            if (newUrl.isNotBlank()) {
+                rosbridgeUrl = newUrl
+                initRosClient(rosbridgeUrl)
+                Toast.makeText(this, R.string.msg_url_updated, Toast.LENGTH_SHORT).show()
+                Log.d(TAG, "API 地址已更新为: $rosbridgeUrl")
+            }
+        }
+
+        val statusText = findViewById<TextView>(R.id.statusText)
 
         findViewById<Button>(R.id.btnConnect).setOnClickListener {
-            connectToRosbridge()
+            Log.d(TAG, "用户点击：连接机器人 -> $rosbridgeUrl")
+            controller.connect()
         }
 
         findViewById<Button>(R.id.btnDisconnect).setOnClickListener {
             Log.d(TAG, "用户点击：断开连接")
             jointStatesJob?.cancel()
-            controller?.disconnect()
-            showStatus("Disconnected")
+            controller.disconnect()
         }
 
         findViewById<Button>(R.id.btnMoveJ).setOnClickListener {
-            val armController = controller ?: return@setOnClickListener showStatus("Please connect first")
-            val values = parseCommandValues(moveJInput, expectedSize = 6, commandName = "MoveJ") ?: return@setOnClickListener
-            Log.d(TAG, "用户点击：执行 MoveJ 示例 -> $values")
-            armController.moveJ(
-                values[0],
-                values[1],
-                values[2],
-                values[3],
-                values[4],
-                values[5],
-            )
-            showStatus("MoveJ command sent")
+            Log.d(TAG, "用户点击：执行 MoveJ 示例")
+            val success = controller.moveJ(0.0, -0.3, 1.0, 0.5, 0.2, 0.0)
+            if (!success) {
+                // 虽然全局错误流会有提示，但针对具体点击，我们也可以做额外处理
+                Log.w(TAG, "MoveJ 发送指令失败，请检查连接")
+            }
         }
 
         findViewById<Button>(R.id.btnGripper).setOnClickListener {
-            val armController = controller ?: return@setOnClickListener showStatus("Please connect first")
-            val values = parseCommandValues(gripperInput, expectedSize = 3, commandName = "Gripper") ?: return@setOnClickListener
-            Log.d(TAG, "用户点击：执行夹爪控制示例 -> $values")
-            armController.controlGripper(values[0], values[1], values[2])
-            showStatus("Gripper command sent")
+            Log.d(TAG, "用户点击：执行夹爪控制示例")
+            val success = controller.controlGripper(1.0, 0.0, 0.0)
+            if (!success) {
+                Log.w(TAG, "Gripper 发送指令失败，请检查连接")
+            }
         }
 
         findViewById<Button>(R.id.btnSubscribeJointStates).setOnClickListener {
-            val armController = controller ?: return@setOnClickListener showStatus("Please connect first")
             Log.d(TAG, "用户点击：订阅关节状态")
             jointStatesJob?.cancel()
             jointStatesJob = lifecycleScope.launch {
-                armController.observeJointStates().collect { state ->
+                controller.observeJointStates().collect { state ->
                     Log.d(TAG, "收到关节数据: ${state.name.size} 轴")
                     statusText.text = buildString {
                         appendLine("joint_states received")
@@ -106,56 +96,37 @@ class RobotArmDebugActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
+    private fun initRosClient(url: String) {
+        // 如果已经初始化过，先断开旧连接并取消旧的观察任务
+        if (::controller.isInitialized) {
+            controller.disconnect()
+        }
+        connectionStateJob?.cancel()
+        errorEventsJob?.cancel()
         jointStatesJob?.cancel()
-        controller?.disconnect()
-        super.onDestroy()
+        
+        rosClient = RosbridgeClient(url)
+        rosClient.loggingEnabled = true
+        controller = RobotArmController(rosClient)
+        
+        // 重新监听状态
+        observeState()
+        observeErrors()
     }
 
-    private fun connectToRosbridge() {
-        val host = hostInput.text.toString().trim()
-        val port = portInput.text.toString().trim().toIntOrNull()
-
-        if (host.isBlank()) {
-            showStatus("Please input rosbridge host/IP")
-            return
+    private fun observeErrors() {
+        errorEventsJob = lifecycleScope.launch {
+            rosClient.errorEvents.collect { error ->
+                Toast.makeText(this@RobotArmDebugActivity, "SDK 异常: ${error.message}", Toast.LENGTH_LONG).show()
+                Log.e(TAG, "SDK Exception caught in UI: ${error.message}")
+            }
         }
-
-        if (port == null || port !in 1..65535) {
-            showStatus("Please input a valid port")
-            return
-        }
-
-        val rosbridgeUrl = "ws://$host:$port"
-        Log.d(TAG, "用户点击：连接机器人 -> $rosbridgeUrl")
-        
-        jointStatesJob?.cancel()
-        controller?.disconnect()
-
-        val newClient = RosbridgeClient(rosbridgeUrl)
-        newClient.loggingEnabled = true // 开启 SDK 报文级日志
-        
-        val newController = RobotArmController(newClient)
-        
-        // 绑定状态监听
-        observeConnection(newController)
-        observeErrors(newClient)
-        
-        rosClient = newClient
-        controller = newController
-        newController.connect()
-
-        prefs.edit()
-            .putString(KEY_HOST, host)
-            .putInt(KEY_PORT, port)
-            .apply()
-
-        showStatus("Connecting to $rosbridgeUrl ...")
     }
 
-    private fun observeConnection(ctrl: RobotArmController) {
-        lifecycleScope.launch {
-            ctrl.connectionState.collect { state ->
+    private fun observeState() {
+        val statusText = findViewById<TextView>(R.id.statusText)
+        connectionStateJob = lifecycleScope.launch {
+            controller.connectionState.collect { state ->
                 val statusDesc = when (state) {
                     RosbridgeClient.ConnectionState.IDLE -> "空闲"
                     RosbridgeClient.ConnectionState.CONNECTING -> "正在连接..."
@@ -164,53 +135,15 @@ class RobotArmDebugActivity : AppCompatActivity() {
                     RosbridgeClient.ConnectionState.RECONNECTING -> "尝试自动重连中..."
                     RosbridgeClient.ConnectionState.ERROR -> "连接出错"
                 }
-                showStatus("当前状态: $statusDesc")
+                statusText.text = "当前状态: $statusDesc"
                 Log.d(TAG, "连接状态变更: $state")
             }
         }
     }
 
-    private fun observeErrors(client: RosbridgeClient) {
-        lifecycleScope.launch {
-            client.errorEvents.collect { error ->
-                Toast.makeText(this@RobotArmDebugActivity, "SDK 异常: ${error.message}", Toast.LENGTH_LONG).show()
-                Log.e(TAG, "SDK Exception caught in UI: ${error.message}")
-            }
-        }
-    }
-
-    private fun showStatus(message: String) {
-        statusText.text = message
-    }
-
-    private fun parseCommandValues(input: EditText, expectedSize: Int, commandName: String): List<Double>? {
-        val raw = input.text.toString().trim()
-        if (raw.isBlank()) {
-            showStatus("Please input $expectedSize values for $commandName")
-            return null
-        }
-
-        val values = raw
-            .split(',')
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .mapNotNull { it.toDoubleOrNull() }
-
-        if (values.size != expectedSize) {
-            showStatus("$commandName requires $expectedSize numeric values")
-            return null
-        }
-
-        return values
-    }
-
-    private companion object {
-        const val DEFAULT_HOST = "10.0.2.2"
-        const val DEFAULT_PORT = 9090
-        const val DEFAULT_MOVE_J = "0.0, -0.3, 1.0, 0.5, 0.2, 0.0"
-        const val DEFAULT_GRIPPER = "1.0, 0.0, 0.0"
-        const val KEY_HOST = "rosbridge_host"
-        const val KEY_PORT = "rosbridge_port"
+    override fun onDestroy() {
+        jointStatesJob?.cancel()
+        controller.disconnect()
+        super.onDestroy()
     }
 }
-

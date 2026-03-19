@@ -75,7 +75,12 @@ class RosbridgeClient(
                         json.decodeFromJsonElement<RosbridgeServiceResponse>(payload)
                     }.getOrNull()
                     if (response != null) {
-                        responseAwaiters.remove(id)?.complete(response)
+                        val deferred = responseAwaiters.remove(id)
+                        if (response.result == false) {
+                            deferred?.completeExceptionally(Exception("ROS Service reported failure: $id"))
+                        } else {
+                            deferred?.complete(response)
+                        }
                     }
                 }
                 _incomingMessages.emit(payload)
@@ -100,6 +105,7 @@ class RosbridgeClient(
         if (_connectionState.value == ConnectionState.CONNECTED || _connectionState.value == ConnectionState.CONNECTING) return
         
         _connectionState.value = ConnectionState.CONNECTING
+        socket?.close() // Ensure old socket is closed
         socket = RosWebSocket(URI(rosbridgeUrl))
         socket?.connect()
     }
@@ -147,15 +153,27 @@ class RosbridgeClient(
         return send(Advertise(topic = topic, type = type))
     }
 
+    fun unadvertise(topic: String): Boolean {
+        return send(Unadvertise(topic = topic))
+    }
+
+    fun unsubscribe(topic: String): Boolean {
+        return send(Unsubscribe(topic = topic))
+    }
+
     suspend fun callService(service: String, args: JsonElement = buildJsonObject { }): RosbridgeServiceResponse {
         val requestId = UUID.randomUUID().toString()
         val deferred = CompletableDeferred<RosbridgeServiceResponse>()
         responseAwaiters[requestId] = deferred
 
-        send(ServiceCall(service = service, args = args, id = requestId))
-        
-        return withTimeout(10000) { // 10秒超时
-            deferred.await()
+        try {
+            send(ServiceCall(service = service, args = args, id = requestId))
+            return withTimeout(10000) { // 10秒超时
+                deferred.await()
+            }
+        } finally {
+            // 确保无论成功还是由于超时/取消失败，都从等待队列中移除，防止内存泄漏
+            responseAwaiters.remove(requestId)
         }
     }
 
