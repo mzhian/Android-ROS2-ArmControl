@@ -22,6 +22,8 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import android.util.Log
+import com.ir.sdk.robotarm.model.Unadvertise
+import com.ir.sdk.robotarm.model.Unsubscribe
 import org.java_websocket.client.WebSocketClient
 import org.java_websocket.handshake.ServerHandshake
 
