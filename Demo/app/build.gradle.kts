@@ -35,10 +35,10 @@ android {
 
 dependencies {
     // [SDK 引入方式：Module 模式 - 调试时使用]
-    // implementation(project(":android-sdk:robot-arm-sdk"))
+     implementation(project(":android-sdk:robot-arm-sdk"))
 
     // [SDK 引入方式：AAR 模式 - 交付测试时使用]
-    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
+//    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
     
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
