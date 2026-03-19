@@ -1,11 +1,12 @@
 plugins {
     id("com.android.library")
-    kotlin("android")
-    kotlin("plugin.serialization")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
+    id("maven-publish")
 }
 
 android {
-    namespace = "com.example.robotarm"
+    namespace = "com.ir.sdk.robotarm"
     compileSdk = 35
 
     defaultConfig {
@@ -29,6 +30,6 @@ android {
 
 dependencies {
     implementation("org.java-websocket:Java-WebSocket:1.5.7")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 }

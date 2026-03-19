@@ -1,126 +1,124 @@
-<?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:fitsSystemWindows="true">
+    android:fitsSystemWindows="true"
+    android:background="#F8F9FA">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingStart="16dp"
-        android:paddingTop="24dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="24dp">
+        android:padding="20dp">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Robot Arm Debug"
+            android:text="@string/app_name"
             android:textSize="22sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:textColor="#2D3436"
+            android:gravity="center"
+            android:layout_marginBottom="24dp" />
 
+        <!-- Connection Settings Section -->
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="可在界面中直接输入 rosbridge IP 和端口，避免写死在代码中。"
-            android:textSize="14sp" />
+            android:text="连接配置 (Connection)"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
 
-        <EditText
-            android:id="@+id/inputHost"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:hint="ROSBridge Host/IP"
-            android:inputType="textUri"
-            android:singleLine="true" />
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
 
-        <EditText
-            android:id="@+id/inputPort"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="ROSBridge Port"
-            android:inputType="number"
-            android:singleLine="true" />
+            <EditText
+                android:id="@+id/inputHost"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:hint="Host (e.g. 10.0.2.2)"
+                android:inputType="textUri" />
+
+            <EditText
+                android:id="@+id/inputPort"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Port"
+                android:inputType="number" />
+        </LinearLayout>
 
         <Button
             android:id="@+id/btnConnect"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Connect" />
+            android:text="@string/btn_connect"
+            android:layout_marginBottom="8dp" />
 
         <Button
             android:id="@+id/btnDisconnect"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Disconnect" />
+            android:text="@string/btn_disconnect"
+            android:layout_marginBottom="24dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
+        <!-- Control Section -->
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="MoveJ values (6 个，逗号分隔)"
-            android:textStyle="bold" />
+            android:text="关节控制 (Joint Control)"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
 
         <EditText
             android:id="@+id/inputMoveJ"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="0.0, -0.3, 1.0, 0.5, 0.2, 0.0"
-            android:inputType="text"
-            android:singleLine="true" />
+            android:hint="Joint values (comma-separated)"
+            android:layout_marginBottom="8dp" />
 
         <Button
             android:id="@+id/btnMoveJ"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="MoveJ Sample" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Gripper values (3 个，逗号分隔)"
-            android:textStyle="bold" />
+            android:text="@string/btn_movej"
+            android:layout_marginBottom="16dp" />
 
         <EditText
             android:id="@+id/inputGripper"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="1.0, 0.0, 0.0"
-            android:inputType="text"
-            android:singleLine="true" />
+            android:hint="Gripper values"
+            android:layout_marginBottom="8dp" />
 
         <Button
             android:id="@+id/btnGripper"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Gripper Sample" />
+            android:text="@string/btn_gripper"
+            android:layout_marginBottom="24dp" />
 
+        <!-- Status & Monitoring -->
         <Button
             android:id="@+id/btnSubscribeJointStates"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Subscribe JointStates" />
+            android:text="@string/btn_subscribe"
+            android:layout_marginBottom="16dp" />
 
         <TextView
             android:id="@+id/statusText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Status"
-            android:textIsSelectable="true"
-            android:textSize="14sp" />
+            android:padding="12dp"
+            android:background="#EDF2F7"
+            android:textColor="#4A5568"
+            android:textSize="14sp"
+            android:text="Waiting for operation..." />
 
     </LinearLayout>
 </ScrollView>

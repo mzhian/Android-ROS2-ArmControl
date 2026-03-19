@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">机械臂控制 Demo</string>
+    <string name="btn_connect">连接机器人 (Connect)</string>
+    <string name="btn_disconnect">断开连接 (Disconnect)</string>
+    <string name="btn_movej">MoveJ 运动示例</string>
+    <string name="btn_gripper">夹爪控制示例</string>
+    <string name="btn_subscribe">订阅实时位姿 (JointStates)</string>
+    <string name="status_initial">等待操作...</string>
+</resources>

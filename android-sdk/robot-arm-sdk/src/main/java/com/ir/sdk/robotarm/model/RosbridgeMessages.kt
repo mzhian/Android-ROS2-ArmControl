@@ -1,4 +1,4 @@
-package com.example.robotarm.model
+package com.ir.sdk.robotarm.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -21,6 +21,7 @@ data class Publish(
     override val op: String = "publish",
     val topic: String,
     val msg: JsonElement,
+    val type: String? = null, // 补全此字段
 ) : RosbridgeMessage
 
 @Serializable

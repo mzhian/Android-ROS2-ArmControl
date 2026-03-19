@@ -1,3 +1,31 @@
-android-sdk/.gradle/
-**/build/
+# Gradle files
+.gradle/
+build/
+
+# IDE files
+.idea/
 *.iml
+*.iws
+.project
+.settings/
+.classpath
+
+# Android Studio
+local.properties
+.DS_Store
+captures/
+
+# Build artifacts
+*.apk
+*.aar
+*.jks
+*.keystore
+
+# External Native Build
+.externalNativeBuild/
+.cxx/
+cmake-build-*/
+
+# Root level
+/build/
+/.gradle/

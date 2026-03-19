@@ -1,13 +1,15 @@
 package com.example.robotarm.demo
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.example.robotarm.control.RobotArmController
-import com.example.robotarm.ros.RosbridgeClient
+import com.ir.sdk.robotarm.control.RobotArmController
+import com.ir.sdk.robotarm.ros.RosbridgeClient
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -19,6 +21,8 @@ import kotlinx.coroutines.launch
  * - UI 输入 rosbridge IP / 端口
  */
 class RobotArmDebugActivity : AppCompatActivity() {
+    private val TAG = "RobotArmDemo"
+
     private var rosClient: RosbridgeClient? = null
     private var controller: RobotArmController? = null
 
@@ -54,14 +58,16 @@ class RobotArmDebugActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.btnDisconnect).setOnClickListener {
+            Log.d(TAG, "用户点击：断开连接")
             jointStatesJob?.cancel()
             controller?.disconnect()
-            statusText.text = "Disconnected"
+            showStatus("Disconnected")
         }
 
         findViewById<Button>(R.id.btnMoveJ).setOnClickListener {
             val armController = controller ?: return@setOnClickListener showStatus("Please connect first")
             val values = parseCommandValues(moveJInput, expectedSize = 6, commandName = "MoveJ") ?: return@setOnClickListener
+            Log.d(TAG, "用户点击：执行 MoveJ 示例 -> $values")
             armController.moveJ(
                 values[0],
                 values[1],
@@ -70,27 +76,30 @@ class RobotArmDebugActivity : AppCompatActivity() {
                 values[4],
                 values[5],
             )
-            statusText.text = "MoveJ command sent"
+            showStatus("MoveJ command sent")
         }
 
         findViewById<Button>(R.id.btnGripper).setOnClickListener {
             val armController = controller ?: return@setOnClickListener showStatus("Please connect first")
             val values = parseCommandValues(gripperInput, expectedSize = 3, commandName = "Gripper") ?: return@setOnClickListener
+            Log.d(TAG, "用户点击：执行夹爪控制示例 -> $values")
             armController.controlGripper(values[0], values[1], values[2])
-            statusText.text = "Gripper command sent"
+            showStatus("Gripper command sent")
         }
 
         findViewById<Button>(R.id.btnSubscribeJointStates).setOnClickListener {
             val armController = controller ?: return@setOnClickListener showStatus("Please connect first")
+            Log.d(TAG, "用户点击：订阅关节状态")
             jointStatesJob?.cancel()
             jointStatesJob = lifecycleScope.launch {
                 armController.observeJointStates().collect { state ->
+                    Log.d(TAG, "收到关节数据: ${state.name.size} 轴")
                     statusText.text = buildString {
                         appendLine("joint_states received")
-                        appendLine("name=${state.names}")
-                        appendLine("position=${state.positions}")
-                        appendLine("velocity=${state.velocities}")
-                        appendLine("effort=${state.efforts}")
+                        appendLine("name=${state.name}")
+                        appendLine("position=${state.position}")
+                        appendLine("velocity=${state.velocity}")
+                        appendLine("effort=${state.effort}")
                     }
                 }
             }
@@ -118,19 +127,56 @@ class RobotArmDebugActivity : AppCompatActivity() {
         }
 
         val rosbridgeUrl = "ws://$host:$port"
+        Log.d(TAG, "用户点击：连接机器人 -> $rosbridgeUrl")
+        
         jointStatesJob?.cancel()
         controller?.disconnect()
 
-        rosClient = RosbridgeClient(rosbridgeUrl)
-        controller = RobotArmController(checkNotNull(rosClient))
-        controller?.connect()
+        val newClient = RosbridgeClient(rosbridgeUrl)
+        newClient.loggingEnabled = true // 开启 SDK 报文级日志
+        
+        val newController = RobotArmController(newClient)
+        
+        // 绑定状态监听
+        observeConnection(newController)
+        observeErrors(newClient)
+        
+        rosClient = newClient
+        controller = newController
+        newController.connect()
 
         prefs.edit()
             .putString(KEY_HOST, host)
             .putInt(KEY_PORT, port)
             .apply()
 
-        showStatus("Connected: $rosbridgeUrl")
+        showStatus("Connecting to $rosbridgeUrl ...")
+    }
+
+    private fun observeConnection(ctrl: RobotArmController) {
+        lifecycleScope.launch {
+            ctrl.connectionState.collect { state ->
+                val statusDesc = when (state) {
+                    RosbridgeClient.ConnectionState.IDLE -> "空闲"
+                    RosbridgeClient.ConnectionState.CONNECTING -> "正在连接..."
+                    RosbridgeClient.ConnectionState.CONNECTED -> "已连接 (Connected)"
+                    RosbridgeClient.ConnectionState.DISCONNECTED -> "已断开"
+                    RosbridgeClient.ConnectionState.RECONNECTING -> "尝试自动重连中..."
+                    RosbridgeClient.ConnectionState.ERROR -> "连接出错"
+                }
+                showStatus("当前状态: $statusDesc")
+                Log.d(TAG, "连接状态变更: $state")
+            }
+        }
+    }
+
+    private fun observeErrors(client: RosbridgeClient) {
+        lifecycleScope.launch {
+            client.errorEvents.collect { error ->
+                Toast.makeText(this@RobotArmDebugActivity, "SDK 异常: ${error.message}", Toast.LENGTH_LONG).show()
+                Log.e(TAG, "SDK Exception caught in UI: ${error.message}")
+            }
+        }
     }
 
     private fun showStatus(message: String) {
@@ -167,3 +213,4 @@ class RobotArmDebugActivity : AppCompatActivity() {
         const val KEY_PORT = "rosbridge_port"
     }
 }
+
