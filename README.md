@@ -1,8 +1,8 @@
-# Hello-World
-Beginner Tutorial
+# Android-ROS2-ArmControl
 
-Just to try out the feature of GitHub, nothing special.
+新增了一个 `android-sdk/` 示例工程，用于将 ROS2 机械臂控制能力封装为 Android SDK（AGP 9.0+ / Kotlin 2.3.10 / Java-WebSocket + rosbridge JSON）。
 
-Wish myself good luck!
+请查看：
 
-Day 1.
+- `android-sdk/README.md`
+- `Demo/联调测试指导说明.md`
