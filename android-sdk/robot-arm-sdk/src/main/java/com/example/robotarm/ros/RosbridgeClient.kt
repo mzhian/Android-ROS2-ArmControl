@@ -25,6 +25,7 @@ class RosbridgeClient(
     private val json: Json = Json {
         ignoreUnknownKeys = true
         explicitNulls = false
+        encodeDefaults = true
     },
 ) {
     private val responseAwaiters = ConcurrentHashMap<String, CompletableDeferred<RosbridgeServiceResponse>>()
